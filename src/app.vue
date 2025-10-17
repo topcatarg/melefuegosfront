@@ -12,7 +12,7 @@
           :class="['message', msg.role]"
         >
           <div class="message-bubble">
-            {{ msg.content }}
+            <div v-html="formatMessage(msg.content)"></div>
           </div>
         </div>
         
@@ -28,22 +28,24 @@
       </div>
 
       <div class="chat-input">
-        <form @submit.prevent="sendMessage" class="d-flex gap-2">
+        <div class="d-flex gap-2">
           <input 
             v-model="messageText"
             type="text" 
             class="form-control"
             placeholder="Escribe tu mensaje..."
             :disabled="chatStore.isLoading"
+            @keyup.enter="sendMessage"
           />
           <button 
-            type="submit" 
+            type="button"
             class="btn btn-primary"
             :disabled="!messageText.trim() || chatStore.isLoading"
+            @click="sendMessage"
           >
             Enviar
           </button>
-        </form>
+        </div>
       </div>
     </div>
   </div>
@@ -65,6 +67,33 @@ const sendMessage = async () => {
   
   await chatStore.sendMessage(text)
   scrollToBottom()
+}
+
+const formatMessage = (content) => {
+  if (!content) return ''
+  
+  // Convertir markdown links [texto](url) a HTML
+  let formatted = content.replace(
+    /\[([^\]]+)\]\(([^)]+)\)/g,
+    '<a href="$2" target="_blank" rel="noopener noreferrer" class="message-link">$1</a>'
+  )
+  
+  // Convertir URLs sueltas (sin markdown) a links
+  formatted = formatted.replace(
+    /(?<!href=")https?:\/\/[^\s<]+/g,
+    '<a href="$&" target="_blank" rel="noopener noreferrer" class="message-link">$&</a>'
+  )
+  
+  // Convertir saltos de línea a <br>
+  formatted = formatted.replace(/\n/g, '<br>')
+  
+  // Convertir **negrita** a <strong>
+  formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+  
+  // Convertir *cursiva* a <em>
+  formatted = formatted.replace(/\*([^*]+)\*/g, '<em>$1</em>')
+  
+  return formatted
 }
 
 const scrollToBottom = () => {
@@ -147,6 +176,7 @@ watch(() => chatStore.messages.length, () => {
   padding: 12px 16px;
   border-radius: 18px;
   word-wrap: break-word;
+  line-height: 1.5;
 }
 
 .message.user .message-bubble {
@@ -157,6 +187,37 @@ watch(() => chatStore.messages.length, () => {
 .message.assistant .message-bubble {
   background: #f1f3f5;
   color: #333;
+}
+
+/* Estilos para links dentro de mensajes */
+.message-bubble :deep(.message-link) {
+  color: #4a90e2;
+  text-decoration: underline;
+  font-weight: 500;
+  transition: color 0.2s ease;
+  cursor: pointer;
+}
+
+.message-bubble :deep(.message-link):hover {
+  color: #357abd;
+}
+
+.message.user .message-bubble :deep(.message-link) {
+  color: #fff;
+  text-decoration: underline;
+}
+
+.message.user .message-bubble :deep(.message-link):hover {
+  color: #e0e0e0;
+}
+
+/* Estilos para texto formateado */
+.message-bubble :deep(strong) {
+  font-weight: 600;
+}
+
+.message-bubble :deep(em) {
+  font-style: italic;
 }
 
 .chat-input {

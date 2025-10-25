@@ -1,23 +1,37 @@
 # Mele Fuegos Chat - Frontend Vue 3
 
-Chat interface simple y elegante para Mele Fuegos usando Vue 3 + Pinia + Bootstrap.
+Chat interface mejorada con página de inicio y múltiples asistentes para Mele Fuegos usando Vue 3 + Vue Router + Pinia + Bootstrap.
+
+## 🎨 Nuevas Características
+
+✅ **Página de Inicio con Health Check**: Verifica la conexión con el backend antes de mostrar las opciones  
+✅ **3 Tipos de Asistentes**: Reservas, Menú y Soporte  
+✅ **Navegación con Vue Router**: Sistema de rutas para navegar entre páginas  
+✅ **Spinner de Carga**: Muestra mientras se configura el sistema  
+✅ **Botones Animados**: Interfaz moderna y atractiva  
+✅ **Botón Volver**: Regresa fácilmente a la página de inicio desde cualquier chat  
 
 ## 📁 Estructura del proyecto
 
 ```
-mele-fuegos-chat/
+mele-fuegos-frontend/
 ├── public/
 ├── src/
+│   ├── router/
+│   │   └── index.js             # Configuración de rutas
 │   ├── stores/
-│   │   └── chatStore.js       # Store de Pinia para el chat
-│   ├── App.vue                # Componente principal
-│   ├── main.js                # Entry point
-│   └── style.css              # Estilos globales
+│   │   └── chatStore.js         # Store de Pinia para el chat
+│   ├── views/
+│   │   ├── HomePage.vue         # Página de inicio con health check
+│   │   └── ChatPage.vue         # Página del chat
+│   ├── App.vue                  # Componente principal
+│   ├── main.js                  # Entry point
+│   └── style.css                # Estilos globales
 ├── index.html
 ├── package.json
 ├── vite.config.js
-├── .env.development           # Variables de entorno - desarrollo
-└── .env.production            # Variables de entorno - producción
+├── .env.development             # Variables de entorno - desarrollo
+└── .env.production              # Variables de entorno - producción
 ```
 
 ## 🚀 Setup Local
@@ -45,12 +59,30 @@ npm run dev
 
 La app estará disponible en: `http://localhost:5173`
 
-## 🧪 Probar localmente
+## 🎯 Flujo de la Aplicación
 
-1. **Asegúrate que el backend esté corriendo** en `http://localhost:5000`
-2. Abre el frontend en `http://localhost:5173`
-3. Escribe un mensaje y envía
-4. Deberías ver la respuesta del chatbot
+1. **Carga Inicial**: 
+   - Muestra spinner "Configurando el sistema..."
+   - Llama al endpoint `/api/chat/health` del backend
+   - Si el backend responde, muestra los botones
+
+2. **Selección de Asistente**:
+   - Usuario elige entre: Reservas 🍽️, Menú 📋 o Soporte 💬
+   - Navega a `/chat/[tipo-bot]`
+
+3. **Chat**:
+   - Interfaz personalizada según el tipo de asistente
+   - Botón "Volver" para regresar al inicio
+   - El chat se resetea al cambiar de asistente
+
+## 🔧 Tecnologías
+
+- **Vue 3** (Composition API)
+- **Vue Router 4** (Navegación)
+- **Pinia** (State management)
+- **Bootstrap 5** (Estilos base)
+- **Axios** (HTTP requests)
+- **Vite** (Build tool)
 
 ## 📦 Build para producción
 
@@ -62,75 +94,33 @@ Esto genera la carpeta `dist/` con los archivos optimizados.
 
 ## 🚢 Deploy en Vercel
 
-### Opción 1: Desde la UI de Vercel
-
-1. Ve a [vercel.com](https://vercel.com)
-2. Click en **"Add New"** → **"Project"**
-3. Conecta tu repositorio de GitHub
-4. Configuración:
-   - **Framework Preset**: Vite
-   - **Root Directory**: `./` (o la carpeta del frontend si está en subcarpeta)
-   - **Build Command**: `npm run build`
-   - **Output Directory**: `dist`
-5. **Environment Variables**:
-   ```
-   VITE_API_URL = https://tu-api-en-render.onrender.com
-   ```
-6. Click **"Deploy"**
-
-### Opción 2: Desde la terminal (Vercel CLI)
-
-```bash
-npm install -g vercel
-vercel login
-vercel
-```
-
-Sigue las instrucciones en pantalla.
-
-### Configurar la URL de producción
-
-En `.env.production`, actualiza con tu URL real de Render:
-```
-VITE_API_URL=https://mele-fuegos-api.onrender.com
-```
-
-## 🎨 Características
-
-✅ Interfaz de chat estilo Claude  
-✅ Indicador de "escribiendo..." con animación  
-✅ Scroll automático a nuevos mensajes  
-✅ Diseño responsive  
-✅ Estado global con Pinia  
-✅ Manejo automático de `conversationId` y `userId`  
-✅ Animaciones suaves  
-
-## 🔧 Tecnologías
-
-- **Vue 3** (Composition API)
-- **Pinia** (State management)
-- **Pinia Colada** (Data fetching helpers)
-- **Bootstrap 5** (Estilos base)
-- **Axios** (HTTP requests)
-- **Vite** (Build tool)
-
-## 📝 Notas
-
-- El primer mensaje se envía a Make
-- Los mensajes subsiguientes van directo a Relevance
-- El `conversationId` se mantiene automáticamente durante toda la sesión
-- El código del restaurant está hardcoded como "RES-010"
+### Configuración en Vercel:
+- **Framework Preset**: Vite
+- **Build Command**: `npm run build`
+- **Output Directory**: `dist`
+- **Environment Variable**: 
+  ```
+  VITE_API_URL = https://tu-api-en-render.onrender.com
+  ```
 
 ## 🐛 Troubleshooting
 
+### Backend no responde al health check
+- Verifica que el backend esté corriendo en el puerto correcto
+- En Render, el primer request puede tardar ~30-60 segundos si el servicio estaba dormido
+- El timeout del health check está configurado a 30 segundos
+
 ### Error de CORS
+- Asegúrate que el backend tenga CORS configurado correctamente
+- Verifica que la URL en `.env.development` coincida con el backend
 
-Si ves errores de CORS, asegúrate que:
-1. El backend tiene CORS configurado correctamente
-2. La URL en `.env.development` coincide con donde corre el backend
-3. El backend está efectivamente corriendo
+### Los botones no navegan
+- Verifica la consola del navegador para ver errores de Vue Router
+- Asegúrate que todas las dependencias estén instaladas correctamente
 
-### No conecta con el backend
+## 📝 Próximos Pasos
 
-Verifica en la consola del navegador (F12) los errores de red.
-Chequea que `VITE_API_URL` esté bien configurado.
+- [ ] Conectar cada tipo de bot con lógica específica en el backend
+- [ ] Agregar historial de conversaciones
+- [ ] Implementar autenticación de usuarios
+- [ ] Agregar más tipos de asistentes según necesidad

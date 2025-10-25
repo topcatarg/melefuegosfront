@@ -1,64 +1,88 @@
 <template>
   <div class="app-container">
-    <div class="chat-container">
-      <div class="chat-header">
-        <h4 class="mb-0">Mele Fuegos - Chat</h4>
-      </div>
-      
-      <div class="chat-messages" ref="messagesContainer">
-        <div 
-          v-for="(msg, index) in chatStore.messages" 
-          :key="index"
-          :class="['message', msg.role]"
-        >
-          <div class="message-bubble">
-            <div v-html="formatMessage(msg.content)"></div>
-          </div>
+    <!-- Navegación -->
+    <nav class="navigation">
+      <button 
+        @click="currentView = 'chat'" 
+        :class="['nav-btn', { active: currentView === 'chat' }]"
+      >
+        💬 Chat
+      </button>
+      <button 
+        @click="currentView = 'menu'" 
+        :class="['nav-btn', { active: currentView === 'menu' }]"
+      >
+        📖 Menú
+      </button>
+    </nav>
+
+    <!-- Vista de Chat -->
+    <div v-if="currentView === 'chat'" class="chat-view">
+      <div class="chat-container">
+        <div class="chat-header">
+          <h4 class="mb-0">Mele Fuegos - Chat</h4>
         </div>
         
-        <div v-if="chatStore.isLoading" class="message assistant">
-          <div class="message-bubble">
-            <span class="typing-indicator">
-              <span></span>
-              <span></span>
-              <span></span>
-            </span>
+        <div class="chat-messages" ref="messagesContainer">
+          <div 
+            v-for="(msg, index) in chatStore.messages" 
+            :key="index"
+            :class="['message', msg.role]"
+          >
+            <div class="message-bubble">
+              {{ msg.content }}
+            </div>
+          </div>
+          
+          <div v-if="chatStore.isLoading" class="message assistant">
+            <div class="message-bubble">
+              <span class="typing-indicator">
+                <span></span>
+                <span></span>
+                <span></span>
+              </span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="chat-input">
-        <div class="d-flex gap-2">
-          <input 
-            v-model="messageText"
-            type="text" 
-            class="form-control"
-            placeholder="Escribe tu mensaje..."
-            :disabled="chatStore.isLoading"
-            @keyup.enter="sendMessage"
-          />
-          <button 
-            type="button"
-            class="btn btn-primary"
-            :disabled="!messageText.trim() || chatStore.isLoading"
-            @click="sendMessage"
-          >
-            Enviar
-          </button>
+        <div class="chat-input">
+          <form @submit.prevent="sendMessage" class="d-flex gap-2">
+            <input 
+              v-model="messageText"
+              type="text" 
+              class="form-control"
+              placeholder="Escribe tu mensaje..."
+              :disabled="chatStore.isLoading"
+            />
+            <button 
+              type="submit" 
+              class="btn btn-primary"
+              :disabled="!messageText.trim() || chatStore.isLoading"
+            >
+              Enviar
+            </button>
+          </form>
         </div>
       </div>
     </div>
+
+    <!-- Vista de Menú -->
+     <PdfViewer v-else :html-content="pdfHtmlContent" />
   </div>
 </template>
 
 <script setup>
-import { ref, nextTick, watch } from 'vue'
+import { ref, nextTick, watch, onMounted } from 'vue'
 import { useChatStore } from './stores/chatStore'
+import MenuView from './MenuView.vue'
+import MenuPdf from './MenuPDF.vue'
+import PdfViewer from './components/PdfViewer.vue'
 
 const chatStore = useChatStore()
 const messageText = ref('')
 const messagesContainer = ref(null)
-
+const currentView = ref('chat')
+const pdfHtmlContent = ref('')
 const sendMessage = async () => {
   if (!messageText.value.trim()) return
   
@@ -67,33 +91,6 @@ const sendMessage = async () => {
   
   await chatStore.sendMessage(text)
   scrollToBottom()
-}
-
-const formatMessage = (content) => {
-  if (!content) return ''
-  
-  // Convertir markdown links [texto](url) a HTML
-  let formatted = content.replace(
-    /\[([^\]]+)\]\(([^)]+)\)/g,
-    '<a href="$2" target="_blank" rel="noopener noreferrer" class="message-link">$1</a>'
-  )
-  
-  // Convertir URLs sueltas (sin markdown) a links
-  formatted = formatted.replace(
-    /(?<!href=")https?:\/\/[^\s<]+/g,
-    '<a href="$&" target="_blank" rel="noopener noreferrer" class="message-link">$&</a>'
-  )
-  
-  // Convertir saltos de línea a <br>
-  formatted = formatted.replace(/\n/g, '<br>')
-  
-  // Convertir **negrita** a <strong>
-  formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-  
-  // Convertir *cursiva* a <em>
-  formatted = formatted.replace(/\*([^*]+)\*/g, '<em>$1</em>')
-  
-  return formatted
 }
 
 const scrollToBottom = () => {
@@ -107,16 +104,57 @@ const scrollToBottom = () => {
 watch(() => chatStore.messages.length, () => {
   scrollToBottom()
 })
+
+ onMounted(async () => 
+{
+  const response = await fetch('/menu-mele-fuegos.html')
+    pdfHtmlContent.value = await response.text()
+})
 </script>
 
 <style scoped>
 .app-container {
   min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.navigation {
+  display: flex;
+  gap: 10px;
+  padding: 20px;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.nav-btn {
+  padding: 12px 30px;
+  border: 2px solid white;
+  background: transparent;
+  color: white;
+  border-radius: 25px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 1.1rem;
+}
+
+.nav-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.nav-btn.active {
+  background: white;
+  color: #667eea;
+}
+
+.chat-view {
   display: flex;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 20px;
+  min-height: calc(100vh - 100px);
 }
 
 .chat-container {
@@ -176,7 +214,6 @@ watch(() => chatStore.messages.length, () => {
   padding: 12px 16px;
   border-radius: 18px;
   word-wrap: break-word;
-  line-height: 1.5;
 }
 
 .message.user .message-bubble {
@@ -187,37 +224,6 @@ watch(() => chatStore.messages.length, () => {
 .message.assistant .message-bubble {
   background: #f1f3f5;
   color: #333;
-}
-
-/* Estilos para links dentro de mensajes */
-.message-bubble :deep(.message-link) {
-  color: #4a90e2;
-  text-decoration: underline;
-  font-weight: 500;
-  transition: color 0.2s ease;
-  cursor: pointer;
-}
-
-.message-bubble :deep(.message-link):hover {
-  color: #357abd;
-}
-
-.message.user .message-bubble :deep(.message-link) {
-  color: #fff;
-  text-decoration: underline;
-}
-
-.message.user .message-bubble :deep(.message-link):hover {
-  color: #e0e0e0;
-}
-
-/* Estilos para texto formateado */
-.message-bubble :deep(strong) {
-  font-weight: 600;
-}
-
-.message-bubble :deep(em) {
-  font-style: italic;
 }
 
 .chat-input {
@@ -254,6 +260,16 @@ watch(() => chatStore.messages.length, () => {
   }
   40% {
     transform: scale(1);
+  }
+}
+
+@media (max-width: 768px) {
+  .navigation {
+    flex-direction: column;
+  }
+
+  .nav-btn {
+    width: 100%;
   }
 }
 </style>

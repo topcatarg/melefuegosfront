@@ -1,3 +1,12 @@
+<template>
+  <router-view />
+</template>
+
+<script setup>
+// El router-view renderiza el componente correspondiente según la ruta
+</script>
+
+<style>
 * {
   margin: 0;
   padding: 0;
@@ -11,7 +20,7 @@ body {
 
 #app {
   width: 100%;
-  height: 100vh;
+  min-height: 100vh;
 }
 
 ::-webkit-scrollbar {
@@ -30,3 +39,4 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
+</style>

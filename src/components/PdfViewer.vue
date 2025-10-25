@@ -23,8 +23,8 @@ export default {
 <style scoped>
 .pdf-viewer-container {
   width: 100%;
-  height: 100%;
-  overflow: auto;
+  height: auto;
+  min-height: 100vh;
 }
 
 /* Estilos base para el contenido del PDF */

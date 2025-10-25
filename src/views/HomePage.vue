@@ -1,61 +1,44 @@
 <template>
   <div class="home-container">
-    <!-- Loading Screen -->
-    <div v-if="isLoading" class="loading-screen">
-      <div class="spinner-container">
-        <div class="spinner-border text-light" role="status">
-          <span class="visually-hidden">Cargando...</span>
-        </div>
-        <p class="mt-3 text-light">Configurando el sistema...</p>
-      </div>
-    </div>
-
     <!-- Main Screen -->
-    <div v-else class="main-screen">
+    <div class="main-screen">
       <div class="content-card">
-        <h1 class="mb-4">Bienvenido a Mele Fuegos</h1>
-        <p class="subtitle mb-5">Selecciona el asistente con el que deseas conversar</p>
+        <h1 class="mb-4">Bienvenido a Tracy</h1>
+        <p class="subtitle mb-5">Selecciona el restaurante</p>
 
         <div class="bot-buttons">
-          <button 
-            @click="selectBot('reservas')" 
+          <button
+            @click="selectRestaurant('resto1')"
             class="bot-button"
           >
-            <div class="bot-icon">🍽️</div>
-            <h3>Reservas</h3>
-            <p>Haz una reserva en nuestro restaurante</p>
+            <div class="bot-icon">
+              <img src="/avatars/mele.jpeg" alt="Mele Fuegos" />
+            </div>
+            <h3>Mele Fuegos</h3>
+            <p>Parrilla Argentina</p>
           </button>
 
-          <button 
-            @click="selectBot('menu')" 
+          <button
+            @click="selectRestaurant('resto2')"
             class="bot-button"
           >
-            <div class="bot-icon">📋</div>
-            <h3>Menú</h3>
-            <p>Consulta nuestra carta y especialidades</p>
+            <div class="bot-icon">
+              <img src="/avatars/amazonia.jpeg" alt="Amazonia" />
+            </div>
+            <h3>Amazonia</h3>
+            <p>Restaurante Amazonia</p>
           </button>
 
-          <button 
-            @click="selectBot('soporte')" 
+          <button
+            @click="selectRestaurant('resto3')"
             class="bot-button"
           >
-            <div class="bot-icon">💬</div>
-            <h3>Soporte</h3>
-            <p>Preguntas generales y asistencia</p>
+            <div class="bot-icon">
+              <img src="/avatars/romero.jpeg" alt="Romero Verde" />
+            </div>
+            <h3>Romero Verde</h3>
+            <p>Restaurante Romero Verde</p>
           </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Error Message -->
-    <div v-if="error" class="error-toast">
-      <div class="toast show" role="alert">
-        <div class="toast-header">
-          <strong class="me-auto">Error</strong>
-          <button type="button" class="btn-close" @click="error = null"></button>
-        </div>
-        <div class="toast-body">
-          {{ error }}
         </div>
       </div>
     </div>
@@ -91,8 +74,8 @@ onMounted(async () => {
   }
 })
 
-const selectBot = (botType) => {
-  router.push({ name: 'Chat', params: { botType } })
+const selectRestaurant = (restaurantId) => {
+  router.push({ name: 'Restaurant', params: { restaurantId } })
 }
 </script>
 
@@ -186,8 +169,24 @@ h1 {
 }
 
 .bot-icon {
-  font-size: 4rem;
   margin-bottom: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.bot-icon img {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 3px solid #e9ecef;
+  transition: all 0.3s ease;
+}
+
+.bot-button:hover .bot-icon img {
+  border-color: #667eea;
+  transform: scale(1.05);
 }
 
 .bot-button h3 {

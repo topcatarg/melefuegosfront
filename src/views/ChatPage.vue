@@ -1,6 +1,18 @@
 <template>
   <div class="chat-page">
-    <div class="chat-container">
+    <!-- Vista de restaurante con HTML y ChatWidget -->
+    <div v-if="isRestaurantView" class="restaurant-view">
+      <button @click="goBack" class="back-button-floating">
+        ← Volver
+      </button>
+
+      <PdfViewer :html-content="chatStore.restaurantHtml" />
+
+      <ChatWidget />
+    </div>
+
+    <!-- Vista de chat tradicional (para botType) -->
+    <div v-else class="chat-container">
       <div class="chat-header">
         <button @click="goBack" class="back-button">
           ← Volver
@@ -10,10 +22,10 @@
           <small class="text-white-50">{{ botSubtitle }}</small>
         </div>
       </div>
-      
+
       <div class="chat-messages" ref="messagesContainer">
-        <div 
-          v-for="(msg, index) in chatStore.messages" 
+        <div
+          v-for="(msg, index) in chatStore.messages"
           :key="index"
           :class="['message', msg.role]"
         >
@@ -21,7 +33,7 @@
             {{ msg.content }}
           </div>
         </div>
-        
+
         <div v-if="chatStore.isLoading" class="message assistant">
           <div class="message-bubble">
             <span class="typing-indicator">
@@ -35,15 +47,15 @@
 
       <div class="chat-input">
         <form @submit.prevent="sendMessage" class="d-flex gap-2">
-          <input 
+          <input
             v-model="messageText"
-            type="text" 
+            type="text"
             class="form-control"
             :placeholder="inputPlaceholder"
             :disabled="chatStore.isLoading"
           />
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             class="btn btn-primary"
             :disabled="!messageText.trim() || chatStore.isLoading"
           >
@@ -59,11 +71,17 @@
 import { ref, computed, nextTick, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useChatStore } from '../stores/chatStore'
+import PdfViewer from '../components/PdfViewer.vue'
+import ChatWidget from '../components/ChatWidget.vue'
 
 const props = defineProps({
   botType: {
     type: String,
-    required: true
+    required: false
+  },
+  restaurantId: {
+    type: String,
+    required: false
   }
 })
 
@@ -71,6 +89,9 @@ const router = useRouter()
 const chatStore = useChatStore()
 const messageText = ref('')
 const messagesContainer = ref(null)
+
+// Determinar si es vista de restaurante
+const isRestaurantView = computed(() => !!props.restaurantId)
 
 const botConfig = computed(() => {
   const configs = {
@@ -97,17 +118,24 @@ const botTitle = computed(() => botConfig.value.title)
 const botSubtitle = computed(() => botConfig.value.subtitle)
 const inputPlaceholder = computed(() => botConfig.value.placeholder)
 
-onMounted(() => {
+onMounted(async () => {
   // Reset del chat cuando se carga la página
   chatStore.resetChat()
+
+  // Si es vista de restaurante, cargar el HTML e inicializar el chat
+  if (isRestaurantView.value) {
+    await chatStore.loadRestaurantHtml(props.restaurantId)
+    // Inicializar el chat con una llamada vacía
+    await chatStore.initializeChat(props.restaurantId)
+  }
 })
 
 const sendMessage = async () => {
   if (!messageText.value.trim()) return
-  
+
   const text = messageText.value
   messageText.value = ''
-  
+
   await chatStore.sendMessage(text)
   scrollToBottom()
 }
@@ -131,13 +159,44 @@ watch(() => chatStore.messages.length, () => {
 </script>
 
 <style scoped>
+/* Vista de Restaurante */
+.restaurant-view {
+  width: 100%;
+  height: 100vh;
+  overflow: auto;
+  position: relative;
+}
+
+.back-button-floating {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 999;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #ddd;
+  color: #333;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 0.95rem;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.back-button-floating:hover {
+  background: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
+}
+
+/* Vista de Chat tradicional */
 .chat-page {
   min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   display: flex;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 20px;
 }
 
 .chat-container {

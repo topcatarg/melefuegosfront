@@ -1,17 +1,30 @@
 <template>
   <div class="chat-widget">
     <!-- Botón flotante -->
-    <button 
-      class="chat-fab" 
+    <button
+      class="chat-fab"
       @click="toggleChat"
       v-show="!isOpen"
-      :class="{ pulse: hasNewMessage }"
+      :class="{ pulse: hasNewMessage, disabled: !chatStore.isChatReady }"
+      :disabled="!chatStore.isChatReady"
     >
       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
       </svg>
       <span v-if="unreadCount > 0" class="badge">{{ unreadCount }}</span>
     </button>
+
+    <!-- Burbuja de "Conectando" -->
+    <div v-if="!chatStore.isChatReady && !isOpen" class="connecting-bubble">
+      <div class="connecting-content">
+        <span class="connecting-dots">
+          <span></span>
+          <span></span>
+          <span></span>
+        </span>
+        <p>Nos estamos conectando...</p>
+      </div>
+    </div>
     
     <!-- Chat expandido -->
     <transition name="slide-up">
@@ -20,13 +33,14 @@
         <div class="chat-header">
           <div class="header-content">
             <div class="avatar">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <img v-if="chatStore.restaurantAvatar" :src="chatStore.restaurantAvatar" :alt="chatStore.restaurantName" />
+              <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                 <circle cx="12" cy="7" r="4"></circle>
               </svg>
             </div>
             <div class="header-info">
-              <h4>Asistente Virtual</h4>
+              <h4>{{ chatStore.restaurantName || 'Asistente Virtual' }}</h4>
               <p class="status">
                 <span class="status-dot"></span>
                 En línea
@@ -43,33 +57,14 @@
         
         <!-- Messages -->
         <div class="chat-messages" ref="messagesContainer">
-          <!-- Welcome message (solo si no hay mensajes) -->
-          <div v-if="chatStore.messages.length === 0" class="welcome-message">
-            <div class="welcome-icon">👋</div>
-            <h3>¡Hola! Bienvenido a Mele Fuegos</h3>
-            <p>¿En qué puedo ayudarte hoy?</p>
-            <div class="quick-actions">
-              <button 
-                v-for="action in quickActions" 
-                :key="action.id"
-                @click="sendQuickMessage(action.text)"
-                class="quick-action-btn"
-              >
-                {{ action.label }}
-              </button>
-            </div>
-          </div>
-
           <!-- Mensajes -->
-          <div 
-            v-for="(msg, index) in chatStore.messages" 
+          <div
+            v-for="(msg, index) in chatStore.messages"
             :key="index"
             :class="['message', msg.role]"
           >
             <div class="message-content">
-              <div class="message-bubble">
-                {{ msg.content }}
-              </div>
+              <div class="message-bubble" v-html="renderMarkdown(msg.content)"></div>
               <div class="message-time">
                 {{ formatTime(msg.timestamp || new Date()) }}
               </div>
@@ -103,9 +98,10 @@
               </svg>
             </button>
             
-            <input 
+            <input
+              ref="messageInput"
               v-model="messageText"
-              type="text" 
+              type="text"
               class="message-input"
               placeholder="Escribe tu mensaje..."
               :disabled="chatStore.isLoading"
@@ -137,19 +133,21 @@
 <script setup>
 import { ref, nextTick, watch } from 'vue'
 import { useChatStore } from '../stores/chatStore'
+import { marked } from 'marked'
 
 const chatStore = useChatStore()
 const isOpen = ref(false)
 const messageText = ref('')
 const messagesContainer = ref(null)
+const messageInput = ref(null)
 const hasNewMessage = ref(false)
 const unreadCount = ref(0)
 
-const quickActions = [
-  { id: 1, label: '🍷 Ver carta de vinos', text: 'Quiero ver la carta de vinos' },
-  { id: 2, label: '📍 Ubicación', text: '¿Dónde están ubicados?' },
-  { id: 3, label: '📞 Contacto', text: 'Quiero contactarme' },
-]
+// Configurar marked
+marked.setOptions({
+  breaks: true,
+  gfm: true
+})
 
 const toggleChat = () => {
   isOpen.value = !isOpen.value
@@ -162,17 +160,12 @@ const toggleChat = () => {
 
 const sendMessage = async () => {
   if (!messageText.value.trim()) return
-  
+
   const text = messageText.value
   messageText.value = ''
-  
+
   await chatStore.sendMessage(text)
   scrollToBottom()
-}
-
-const sendQuickMessage = (text) => {
-  messageText.value = text
-  sendMessage()
 }
 
 const scrollToBottom = () => {
@@ -187,11 +180,32 @@ const formatTime = (date) => {
   if (!(date instanceof Date)) {
     date = new Date(date)
   }
-  return date.toLocaleTimeString('es-AR', { 
-    hour: '2-digit', 
-    minute: '2-digit' 
+  return date.toLocaleTimeString('es-AR', {
+    hour: '2-digit',
+    minute: '2-digit'
   })
 }
+
+const renderMarkdown = (content) => {
+  return marked.parse(content)
+}
+
+const focusInput = () => {
+  nextTick(() => {
+    if (messageInput.value) {
+      messageInput.value.focus()
+    }
+  })
+}
+
+// Watch for chat ready (primera respuesta del backend)
+watch(() => chatStore.isChatReady, (isReady) => {
+  if (isReady && chatStore.messages.length > 0) {
+    // Abrir el chat automáticamente cuando llega la primera respuesta
+    isOpen.value = true
+    nextTick(() => scrollToBottom())
+  }
+})
 
 // Watch for new messages
 watch(() => chatStore.messages.length, (newLength, oldLength) => {
@@ -200,6 +214,11 @@ watch(() => chatStore.messages.length, (newLength, oldLength) => {
     unreadCount.value++
   }
   scrollToBottom()
+
+  // Mantener el foco en el input si el chat está abierto
+  if (isOpen.value) {
+    focusInput()
+  }
 })
 </script>
 
@@ -227,13 +246,77 @@ watch(() => chatStore.messages.length, (newLength, oldLength) => {
   justify-content: center;
 }
 
-.chat-fab:hover {
+.chat-fab:hover:not(:disabled) {
   transform: scale(1.1);
   box-shadow: 0 6px 20px rgba(139, 69, 19, 0.6);
 }
 
+.chat-fab.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .chat-fab.pulse {
   animation: pulse 2s infinite;
+}
+
+.connecting-bubble {
+  position: fixed;
+  bottom: 100px;
+  right: 30px;
+  background: white;
+  border-radius: 20px;
+  padding: 15px 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  animation: slideInUp 0.3s ease-out;
+  max-width: 200px;
+}
+
+.connecting-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.connecting-content p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #666;
+  text-align: center;
+}
+
+.connecting-dots {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.connecting-dots span {
+  width: 8px;
+  height: 8px;
+  background: #8B4513;
+  border-radius: 50%;
+  animation: bounce 1.4s infinite ease-in-out;
+}
+
+.connecting-dots span:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.connecting-dots span:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes pulse {
@@ -299,6 +382,13 @@ watch(() => chatStore.messages.length, (newLength, oldLength) => {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .header-info h4 {
@@ -450,6 +540,83 @@ watch(() => chatStore.messages.length, (newLength, oldLength) => {
   color: #333;
   border: 1px solid #e0e0e0;
   border-bottom-left-radius: 4px;
+}
+
+/* Estilos para markdown renderizado */
+.message-bubble :deep(p) {
+  margin: 0 0 8px 0;
+}
+
+.message-bubble :deep(p:last-child) {
+  margin-bottom: 0;
+}
+
+.message-bubble :deep(strong) {
+  font-weight: 600;
+}
+
+.message-bubble :deep(em) {
+  font-style: italic;
+}
+
+.message-bubble :deep(a) {
+  color: #8B4513;
+  text-decoration: underline;
+}
+
+.message.user .message-bubble :deep(a) {
+  color: #fff;
+  text-decoration: underline;
+}
+
+.message-bubble :deep(ul),
+.message-bubble :deep(ol) {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.message-bubble :deep(li) {
+  margin: 4px 0;
+}
+
+.message-bubble :deep(code) {
+  background: rgba(0, 0, 0, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+}
+
+.message.user .message-bubble :deep(code) {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.message-bubble :deep(pre) {
+  background: rgba(0, 0, 0, 0.05);
+  padding: 10px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 8px 0;
+}
+
+.message.user .message-bubble :deep(pre) {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.message-bubble :deep(pre code) {
+  background: none;
+  padding: 0;
+}
+
+.message-bubble :deep(blockquote) {
+  border-left: 3px solid #8B4513;
+  padding-left: 12px;
+  margin: 8px 0;
+  font-style: italic;
+}
+
+.message.user .message-bubble :deep(blockquote) {
+  border-left-color: rgba(255, 255, 255, 0.5);
 }
 
 .message-time {

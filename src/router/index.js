@@ -9,6 +9,12 @@ const routes = [
     component: HomePage
   },
   {
+    path: '/restaurant/:restaurantId',
+    name: 'Restaurant',
+    component: ChatPage,
+    props: true
+  },
+  {
     path: '/chat/:botType',
     name: 'Chat',
     component: ChatPage,
